@@ -1,0 +1,24 @@
+{
+  "_uitleg": [
+    "Onder 'watches' staan de auto's waarop gelet wordt.",
+    "Lege 'make' = elk merk. Lege 'model' = elk model van dat merk.",
+    "'max_price' is optioneel: maximaal euro per maand (met de prijsinstellingen hieronder).",
+    "Matching is hoofdletter-ongevoelig en op deel-tekst, dus merk 'Mercedes' matcht ook 'Mercedes-Benz' en 'Mercedes-AMG'.",
+    "De 'pricing'-instellingen komen overeen met jouw showroom-URL."
+  ],
+
+  "pricing": {
+    "include_tax_in_prices": false,
+    "number_of_km_per_month": 1000,
+    "include_mileage_costs_in_pricing": true,
+    "include_fuel_costs_in_pricing": true
+  },
+
+  "watches": [
+    { "make": "Mercedes",   "model": "" },
+    { "make": "Audi",       "model": "" },
+    { "make": "BMW",        "model": "" },
+    { "make": "Polestar",   "model": "" },
+    { "make": "Volkswagen", "model": "" }
+  ]
+}
