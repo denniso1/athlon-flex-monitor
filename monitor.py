@@ -26,7 +26,7 @@ from athlon_flex_client.models.filters.vehicle_cluster_filter import (
 )
 
 ROOT = Path(__file__).parent
-WATCHLIST_PATH = ROOT / "watchlist.json"
+WATCHLIST_PATH = ROOT / "watchlist (1).json"
 STATE_PATH = ROOT / "state.json"
 
 # Deze link wordt in het bericht gezet zodat je met een tik de showroom opent.
