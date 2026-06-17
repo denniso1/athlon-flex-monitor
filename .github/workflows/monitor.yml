@@ -1,1 +1,54 @@
+name: Athlon Flex monitor
 
+on:
+  schedule:
+    # Elke 15 minuten (tijden in UTC). Pas de */15 aan naar wens.
+    # Let op: gratis Actions-minuten zijn onbeperkt bij een PUBLIC repo.
+    # Bij een private repo: houd het interval op >= 30 min (zie README).
+    - cron: "*/15 * * * *"
+  workflow_dispatch: {}   # geeft een "Run workflow"-knop om handmatig te testen
+
+permissions:
+  contents: write          # nodig om state.json terug te committen
+
+concurrency:
+  group: athlon-flex-monitor
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Installeer dependencies
+        run: pip install --quiet -r requirements.txt
+
+      - name: Controleer de showroom
+        env:
+          # --- Notificatiekanaal (minstens 1 instellen) ---
+          NTFY_TOPIC:          ${{ secrets.NTFY_TOPIC }}
+          NTFY_TOKEN:          ${{ secrets.NTFY_TOKEN }}
+          TELEGRAM_BOT_TOKEN:  ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID:    ${{ secrets.TELEGRAM_CHAT_ID }}
+          # --- Optioneel: inloggen voor netto-prijzen (niet nodig) ---
+          ATHLON_USERNAME:     ${{ secrets.ATHLON_USERNAME }}
+          ATHLON_PASSWORD:     ${{ secrets.ATHLON_PASSWORD }}
+          GROSS_YEARLY_INCOME: ${{ secrets.GROSS_YEARLY_INCOME }}
+        run: python monitor.py
+
+      - name: Bewaar status
+        run: |
+          if [[ -n "$(git status --porcelain state.json)" ]]; then
+            git config user.name  "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git add state.json
+            git commit -m "Update showroom-status [skip ci]"
+            git push
+          else
+            echo "Geen wijziging in status."
+          fi
