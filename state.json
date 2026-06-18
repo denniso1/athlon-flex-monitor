@@ -4,6 +4,7 @@
   "outage_alerted": false,
   "present": [
     "Audi|A4 Limousine|35 TFSI S tronic Advanced Edition 4D 110kW",
+    "Audi|E-Tron|55 quattro Advanced edition Plus 5D 300kW",
     "Mercedes-Benz|CLA Coupe|CLA 180 DCT Business Line 4D 100kW",
     "Mercedes-Benz|CLA Coupe|CLA 180 DCT Luxury Line 4D 100kW",
     "Polestar|Polestar 2|78kWh Single M.Long Range 170kW",
@@ -11,6 +12,7 @@
     "Polestar|Polestar 2|Long Range Single Motor 5D 170kW",
     "Polestar|Polestar 2|Standard Range Single Motor 5D 170kW",
     "Volkswagen|ID4|77kWh 150kW Pro Auto 5D",
+    "Volkswagen|ID5|BEV 77 kWh 128 kW Pro Business auto 5D",
     "Volkswagen|Taigo|1.0 TSI 70kW Life Business 5D",
     "Volkswagen|Up!|1.0 Up! 5D 48kW"
   ],
