@@ -4,12 +4,15 @@
   "outage_alerted": false,
   "present": [
     "Audi|A4 Limousine|35 TFSI S tronic Advanced Edition 4D 110kW",
-    "Mercedes-Benz|CLA Shooting Brake|CLA 180 DCT AMG Line 5D 100kW",
+    "Audi|E-Tron|55 quattro edition 5D 300kW",
     "Polestar|Polestar 2|78kWh Single Motor Long Range 5D 170kW",
     "Polestar|Polestar 2|Long Range Dual Motor 5D 300kW",
     "Polestar|Polestar 2|Long Range Single Motor 5D 170kW",
     "Polestar|Polestar 2|Standard Range Single Motor 5D 170kW",
-    "Volkswagen|Golf|1.0 TSI 81kW Life Business 5D"
+    "Volkswagen|Golf|1.0 TSI 81kW Life Business 5D",
+    "Volkswagen|ID4|77kWh 128kW Pro Business Auto 5D",
+    "Volkswagen|Polo|1.0 TSI 70kW 7-DSG Life Business 5D",
+    "Volkswagen|T-Roc|1.0 TSI 85kW Life Edition 5D"
   ],
   "present_kind": "variant"
 }
