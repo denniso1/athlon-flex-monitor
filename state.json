@@ -4,7 +4,10 @@
   "outage_alerted": false,
   "present": [
     "Audi|A4 Avant|35 TFSI S tronic Advanced Edition 5D 110kW",
+    "Audi|A6 Avant|2.0 40 TFSI Advanced edition S tronic 5D 150kW",
+    "Mercedes-Benz|CLA Coupe|CLA 180 DCT Luxury Line 4D 100kW",
     "Polestar|Polestar 2|64kWh Single Motor Standard Range 5D 165kW",
+    "Polestar|Polestar 2|78kWh Single Motor Long Range 5D 170kW",
     "Polestar|Polestar 2|Long Range Dual Motor 5D 300kW",
     "Polestar|Polestar 2|Long Range Single Motor 5D 170kW",
     "Polestar|Polestar 2|Standard Range Single Motor 5D 170kW",
