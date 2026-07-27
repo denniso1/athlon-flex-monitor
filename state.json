@@ -4,6 +4,9 @@
   "outage_alerted": false,
   "present": [
     "Audi|A4 Limousine|35 TFSI S tronic Advanced Edition 4D 110kW",
+    "BMW|i4|eDrive35 5D 210kW",
+    "Mercedes-Benz|CLA Shooting Brake|CLA 180 DCT Business Line 5D 100kW",
+    "Mercedes-Benz|EQE|300 Luxury Line auto 4D 180kW",
     "Polestar|Polestar 2|Long Range Dual Motor 5D 300kW",
     "Polestar|Polestar 2|Long Range Single Motor 5D 170kW",
     "Polestar|Polestar 2|Standard Range Single Motor 5D 170kW",
