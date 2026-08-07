@@ -6,7 +6,6 @@
     "Audi|A4 Limousine|35 TFSI S tronic Advanced Edition 4D 110kW",
     "Audi|Q4 e-tron|40 e-tron Advanced Edition 5D 150kW",
     "Mercedes-Benz|CLA Shooting Brake|CLA 180 DCT Business Line 5D 100kW",
-    "Mercedes-Benz|EQB|EQB 250+ Business Line auto 5D 140kW",
     "Polestar|Polestar 2|78kWh Dual Motor Long Range 5D 300kW",
     "Polestar|Polestar 2|Long Range Dual Motor 5D 300kW",
     "Polestar|Polestar 2|Long Range Single Motor 5D 170kW",
@@ -16,7 +15,6 @@
     "Volkswagen|ID5|BEV 77 kWh 128 kW Pro auto 5D",
     "Volkswagen|ID5|BEV 77 kWh 150 kW Pro auto 5D",
     "Volkswagen|Passat Variant|1.5 TSI 7-DSG Business 5D 110kW",
-    "Volkswagen|Polo|1.0 TSI 70kW 7-DSG Life 5D",
     "Volkswagen|Polo|1.0 TSI 70kW Life Business 5D"
   ],
   "present_kind": "variant"
