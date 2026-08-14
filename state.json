@@ -1,7 +1,7 @@
 {
-  "consecutive_failures": 2,
+  "consecutive_failures": 3,
   "last_heartbeat": "2026-08-12",
-  "outage_alerted": false,
+  "outage_alerted": true,
   "present": [
     "Audi|A4 Limousine|35 TFSI S tronic Advanced Edition 4D 110kW",
     "Mercedes-Benz|CLA Coupe|CLA 180 DCT Business Line 4D 100kW",
