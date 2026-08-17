@@ -1,13 +1,17 @@
 {
-  "consecutive_failures": 104,
+  "consecutive_failures": 0,
   "last_heartbeat": "2026-08-12",
-  "outage_alerted": true,
+  "outage_alerted": false,
   "present": [
     "Audi|A4 Limousine|35 TFSI S tronic Advanced Edition 4D 110kW",
+    "BMW|i4|i4 M50 5D 400kW",
+    "BMW|i4|i4 eDrive40 5D 250kW",
     "Mercedes-Benz|CLA Coupe|CLA 180 DCT Business Line 4D 100kW",
     "Mercedes-Benz|EQA|250 Business Solution AMG",
-    "Mercedes-Benz|EQE|EQE 300 Business Edition auto 4D 180kW",
+    "Mercedes-Benz|EQB|EQB 300 4MATIC Luxury Line auto 5D 168kW",
+    "Polestar|Polestar 2|64kWh Single Motor Standard Range 5D 165kW",
     "Polestar|Polestar 2|78kWh Dual Motor Long Range 5D 300kW",
+    "Polestar|Polestar 2|78kWh Single Motor Long Range 5D 170kW",
     "Polestar|Polestar 2|Long Range Dual Motor 5D 300kW",
     "Polestar|Polestar 2|Long Range Single Motor 5D 170kW",
     "Polestar|Polestar 2|Long Range Single Motor Plus 5D 220kW",
@@ -17,8 +21,8 @@
     "Volkswagen|ID4|77kWh 150kW Pro Auto 5D",
     "Volkswagen|ID5|BEV 77 kWh 128 kW Pro auto 5D",
     "Volkswagen|ID5|BEV 77 kWh 150 kW Pro auto 5D",
-    "Volkswagen|Polo|1.0 TSI 70kW Life 5D",
-    "Volkswagen|Taigo|1.0 TSI 70kW Life Business 5D"
+    "Volkswagen|Passat Variant|1.5 TSI 7-DSG Business 5D 110kW",
+    "Volkswagen|Polo|1.0 TSI 70kW Life 5D"
   ],
   "present_kind": "variant"
 }
