@@ -3,8 +3,10 @@
   "last_heartbeat": "2026-08-12",
   "outage_alerted": false,
   "present": [
+    "BMW|3 Serie Touring|320e 5D 150kW",
     "BMW|i4|i4 M50 5D 400kW",
     "BMW|i4|i4 eDrive40 5D 250kW",
+    "Mercedes-Benz|A-Klasse|A 180 DCT Luxury Line 5D 100kW",
     "Mercedes-Benz|CLA Coupe|CLA 180 DCT Business Line 4D 100kW",
     "Polestar|Polestar 2|78kWh Dual Motor Long Range 5D 300kW",
     "Polestar|Polestar 2|78kWh Single Motor Long Range 5D 170kW",
@@ -14,6 +16,7 @@
     "Volkswagen|ID3|58kWh 150kW Pro Advantage auto 5D",
     "Volkswagen|ID4|77kWh 128kW Pro Business Auto 5D",
     "Volkswagen|ID4|77kWh 150kW Pro Auto 5D",
+    "Volkswagen|ID5|BEV 77 kWh 128 kW Pro Business auto 5D",
     "Volkswagen|ID5|BEV 77 kWh 128 kW Pro auto 5D",
     "Volkswagen|ID5|BEV 77 kWh 150 kW Pro auto 5D",
     "Volkswagen|Passat Variant|1.5 TSI 7-DSG Business 5D 110kW"
