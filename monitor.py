@@ -1,20 +1,20 @@
 #!/usr/bin/env python3
 """
-Athlon Flex showroom-monitor (v4).
+Athlon Flex showroom-monitor (v5).
 
-Haalt de beschikbare auto's uit de Athlon Flex showroom, vergelijkt ze met
-jouw verlanglijst (watchlist.json) en stuurt een pushbericht (ntfy en/of
-Telegram) zodra een gewenste UITVOERING nieuw verschijnt — ook binnen een
-model dat al in de showroom stond.
+Wijzigingen t.o.v. v4:
+  * LOOP-MODUS. Een enkele draai blijft uren doorchecken met een korte
+    tussenpoos. Daardoor hangt de meetfrequentie niet meer af van de GitHub
+    cron, die in de praktijk maar een fractie van de geplande runs start.
+  * MELDING BEVESTIGD VOOR OPSLAG. Een uitvoering wordt pas als "gezien"
+    weggeschreven nadat de melding echt verstuurd is. Mislukt het versturen,
+    dan blijft de auto nieuw en probeert de volgende ronde het opnieuw.
+  * VOORRANGSAUTO'S. Trefwoorden uit de watchlist krijgen ntfy-prioriteit
+    urgent, zodat je telefoon ze ook op stil doorlaat.
+  * DEAD MAN SWITCH. Optionele ping naar healthchecks.io na elke geslaagde
+    ronde, zodat stilte zelf alarm geeft.
 
-Per nieuwe uitvoering krijg je de specifieke naam (bijv.
-"CLA 180 DCT Business Line 4D 100kW"), het maandbedrag, de bijtelling % en
-de fiscale (catalogus)waarde, plus een foto en een directe link naar die auto.
-Daarnaast: storing-waarschuwing als de API onbereikbaar is, en een wekelijkse
-heartbeat.
-
-Gebouwd op de (onofficiele) athlon-flex-client package:
-  https://pypi.org/project/athlon-flex-client/
+Gebouwd op de (onofficiele) athlon-flex-client package.
 """
 from __future__ import annotations
 
@@ -22,8 +22,10 @@ import asyncio
 import html
 import json
 import os
+import subprocess
 import sys
-from datetime import date
+import time
+from datetime import date, datetime, timezone
 from pathlib import Path
 from urllib.parse import quote, urlencode
 import urllib.request
@@ -34,8 +36,17 @@ from athlon_flex_client.models.filters.vehicle_cluster_filter import (
 )
 
 ROOT = Path(__file__).parent
-WATCHLIST_PATH = ROOT / "watchlist (1).json"
 STATE_PATH = ROOT / "state.json"
+
+
+def watchlist_path() -> Path:
+    """Accepteer zowel de nette naam als de oude naam met spatie."""
+    for name in ("watchlist.json", "watchlist (1).json"):
+        p = ROOT / name
+        if p.exists():
+            return p
+    raise FileNotFoundError("Geen watchlist.json gevonden naast monitor.py")
+
 
 SHOWROOM_URL = os.environ.get(
     "SHOWROOM_URL",
@@ -45,9 +56,14 @@ SHOWROOM_URL = os.environ.get(
 )
 
 
+def log(msg: str, err: bool = False) -> None:
+    stamp = datetime.now(timezone.utc).strftime("%H:%M:%S")
+    print(f"[{stamp}] {msg}", file=sys.stderr if err else sys.stdout, flush=True)
+
+
 # --------------------------------------------------------------------- config
 def load_watchlist() -> dict:
-    with open(WATCHLIST_PATH, encoding="utf-8") as f:
+    with open(watchlist_path(), encoding="utf-8") as f:
         return json.load(f)
 
 
@@ -65,6 +81,47 @@ def save_state(state: dict) -> None:
         json.dumps(state, ensure_ascii=False, indent=2, sort_keys=True),
         encoding="utf-8",
     )
+
+
+def commit_state() -> None:
+    """Push state.json terug naar de repo. Alleen actief in CI."""
+    if os.environ.get("GIT_PERSIST") != "1":
+        return
+    try:
+        changed = subprocess.run(
+            ["git", "status", "--porcelain", "state.json"],
+            cwd=ROOT, capture_output=True, text=True, timeout=60,
+        ).stdout.strip()
+        if not changed:
+            return
+        env = {**os.environ, "GIT_TERMINAL_PROMPT": "0"}
+
+        def run(*args):
+            return subprocess.run(
+                args, cwd=ROOT, capture_output=True, text=True, timeout=120, env=env
+            )
+
+        run("git", "config", "user.name", "github-actions[bot]")
+        run("git", "config", "user.email",
+            "github-actions[bot]@users.noreply.github.com")
+        run("git", "add", "state.json")
+        run("git", "commit", "-m", "Update showroom-status [skip ci]")
+        run("git", "pull", "--rebase", "--autostash", "--quiet")
+        res = run("git", "push", "--quiet")
+        if res.returncode != 0:
+            log(f"git push mislukt: {res.stderr.strip()[:200]}", err=True)
+    except Exception as exc:  # noqa: BLE001
+        log(f"git persist mislukt: {exc}", err=True)
+
+
+def ping_healthcheck(suffix: str = "") -> None:
+    url = os.environ.get("HEALTHCHECK_URL")
+    if not url:
+        return
+    try:
+        urllib.request.urlopen(url.rstrip("/") + suffix, timeout=15).close()
+    except Exception:  # noqa: BLE001
+        pass
 
 
 # ------------------------------------------------------------------- matching
@@ -107,11 +164,19 @@ def vkey(cluster, v) -> str:
     return f"{make}|{model}|{typ}"
 
 
+def is_priority(key: str, keywords: list[str]) -> bool:
+    low = key.lower()
+    return any(all(part in low for part in kw.lower().split()) for kw in keywords)
+
+
 # ------------------------------------------------------------------- helpers
 def deeplink(make: str, model: str, vehicle_id) -> str:
     if not vehicle_id:
         return SHOWROOM_URL
-    seg = lambda s: quote(str(s), safe="")
+
+    def seg(s):
+        return quote(str(s), safe="")
+
     return f"https://flex.athlon.com/app/showroom/{seg(make)}/{seg(model)}/{seg(vehicle_id)}"
 
 
@@ -197,7 +262,8 @@ def notify(
     image_url: str | None = None,
     tags: str = "red_car",
     priority: str = "high",
-) -> None:
+) -> bool:
+    """Verstuurt de melding. Geeft True terug als minstens een kanaal lukte."""
     sent = False
     quiet = priority in ("low", "min")
 
@@ -212,7 +278,7 @@ def notify(
         }
         if url:
             headers["Click"] = url
-        if image_url:
+        if image_url and image_url.isascii():
             headers["Attach"] = image_url
         if os.environ.get("NTFY_TOKEN"):
             headers["Authorization"] = f"Bearer {os.environ['NTFY_TOKEN']}"
@@ -220,9 +286,9 @@ def notify(
         try:
             _send(f"{server}/{topic}", data=body.encode("utf-8"), headers=headers)
             sent = True
-            print(f"ntfy: verstuurd ({title.strip()})")
+            log(f"ntfy: verstuurd ({title.strip()})")
         except Exception as exc:  # noqa: BLE001
-            print(f"ntfy: MISLUKT ({exc})", file=sys.stderr)
+            log(f"ntfy: MISLUKT ({type(exc).__name__}: {exc})", err=True)
 
     tg_token = os.environ.get("TELEGRAM_BOT_TOKEN")
     tg_chat = os.environ.get("TELEGRAM_CHAT_ID")
@@ -258,29 +324,31 @@ def notify(
                     data=urlencode(text_payload).encode(),
                 )
             sent = True
-            print(f"telegram: verstuurd ({title.strip()})")
-        except Exception as exc:  # noqa: BLE001
+            log(f"telegram: verstuurd ({title.strip()})")
+        except Exception:  # noqa: BLE001
             try:
                 _send(
                     f"https://api.telegram.org/bot{tg_token}/sendMessage",
                     data=urlencode(text_payload).encode(),
                 )
                 sent = True
-                print(f"telegram: foto faalde, tekst verstuurd ({title.strip()})")
+                log(f"telegram: foto faalde, tekst verstuurd ({title.strip()})")
             except Exception as exc2:  # noqa: BLE001
-                print(f"telegram: MISLUKT ({exc2})", file=sys.stderr)
+                log(f"telegram: MISLUKT ({exc2})", err=True)
 
     if not sent:
-        print(
-            "WAARSCHUWING: geen notificatiekanaal geconfigureerd. Zet NTFY_TOPIC "
-            "en/of TELEGRAM_BOT_TOKEN + TELEGRAM_CHAT_ID.",
-            file=sys.stderr,
+        log(
+            "WAARSCHUWING: melding NIET bezorgd. Controleer NTFY_TOPIC en/of "
+            "TELEGRAM_BOT_TOKEN + TELEGRAM_CHAT_ID.",
+            err=True,
         )
+    return sent
 
 
 # ----------------------------------------------------------------- berichten
-def variant_message(info: dict) -> tuple[str, list[str]]:
-    title = f"Nieuw: {info['make']} {info['model']}"
+def variant_message(info: dict, urgent: bool = False) -> tuple[str, list[str]]:
+    prefix = "TOPPER" if urgent else "Nieuw"
+    title = f"{prefix}: {info['make']} {info['model']}"
     variant = f"{info['model']} {info['type']}".strip()
     lines = [variant]
 
@@ -298,6 +366,8 @@ def variant_message(info: dict) -> tuple[str, list[str]]:
 
     if info.get("fiscal"):
         lines.append(f"Fiscale waarde: {euro(info['fiscal'])}")
+    if urgent:
+        lines.append("Staat op je verlanglijst. Nu boeken.")
     return title, lines
 
 
@@ -318,8 +388,8 @@ def heartbeat_due(last: str | None, days: int) -> bool:
         return False
 
 
-async def main_async() -> int:
-    cfg = load_watchlist()
+async def check_once(client: AthlonFlexClient, cfg: dict) -> None:
+    """Een enkele controleronde. Werkt state bij en verstuurt meldingen."""
     watches = cfg.get("watches", [])
     pricing = cfg.get("pricing", {})
     settings = cfg.get("settings", {})
@@ -327,151 +397,176 @@ async def main_async() -> int:
     heartbeat_days = int(settings.get("heartbeat_days", 7))
     outage_threshold = int(settings.get("outage_threshold", 3))
     exclude_ev = bool(settings.get("exclude_electric", False))
+    priority_keywords = settings.get("priority_keywords", []) or []
+    interval_min = max(1, int(os.environ.get("INTERVAL_SECONDS", "120")) // 60)
 
     if not watches:
-        print("Verlanglijst is leeg \u2014 vul watchlist.json.", file=sys.stderr)
-        return 0
+        log("Verlanglijst is leeg, vul watchlist.json.", err=True)
+        return
 
     state = load_state()
-    client = make_client()
 
+    # ---- ophalen (storing-detectie) ---------------------------------------
     try:
-        # ---- ophalen (storing-detectie) -----------------------------------
-        try:
-            clusters = await fetch_clusters(client, pricing)
-        except Exception as exc:  # noqa: BLE001
-            state["consecutive_failures"] = state.get("consecutive_failures", 0) + 1
-            print(
-                f"Athlon API onbereikbaar (poging {state['consecutive_failures']}): {exc}",
-                file=sys.stderr,
-            )
-            if state["consecutive_failures"] >= outage_threshold and not state.get(
-                "outage_alerted"
+        clusters = await fetch_clusters(client, pricing)
+    except Exception as exc:  # noqa: BLE001
+        state["consecutive_failures"] = state.get("consecutive_failures", 0) + 1
+        log(f"Athlon API onbereikbaar (poging {state['consecutive_failures']}): {exc}",
+            err=True)
+        if state["consecutive_failures"] >= outage_threshold and not state.get(
+            "outage_alerted"
+        ):
+            mins = state["consecutive_failures"] * interval_min
+            if notify(
+                "Athlon-monitor: mogelijke storing",
+                [
+                    f"De showroom-API reageert al {state['consecutive_failures']} "
+                    f"checks niet (circa {mins} min).",
+                    "Je krijgt geen auto-meldingen tot het herstelt.",
+                ],
+                SHOWROOM_URL,
+                tags="warning",
             ):
-                mins = state["consecutive_failures"] * 15
-                notify(
-                    "\u26a0\ufe0f Athlon-monitor: mogelijke storing",
-                    [
-                        f"De showroom-API reageert al {state['consecutive_failures']} "
-                        f"checks niet (\u00b1{mins} min).",
-                        "Je krijgt geen auto-meldingen tot het herstelt.",
-                    ],
-                    SHOWROOM_URL,
-                    tags="warning",
-                )
                 state["outage_alerted"] = True
-            save_state(state)
-            return 0
+        save_state(state)
+        commit_state()
+        return
 
-        # ---- succes -------------------------------------------------------
-        was_outage = bool(state.get("outage_alerted"))
-        state["consecutive_failures"] = 0
-        state["outage_alerted"] = False
+    # ---- succes ------------------------------------------------------------
+    was_outage = bool(state.get("outage_alerted"))
+    state["consecutive_failures"] = 0
+    state["outage_alerted"] = False
 
-        matched = [c for c in clusters if any(cluster_matches(c, w) for w in watches)]
-        previous = set(state.get("present", []))
-        seeding = state.get("present_kind") != "variant"
+    matched = [c for c in clusters if any(cluster_matches(c, w) for w in watches)]
+    previous = set(state.get("present", []))
+    seeding = state.get("present_kind") != "variant"
 
-        # ---- uitvoeringen per matchend model ophalen ----------------------
-        current: dict[str, dict] = {}
-        carried: set[str] = set()
-        for cluster in matched:
-            prefix = f"{cluster.make}|{cluster.model}|"
-            cap = price_cap_for(cluster, watches)
-            try:
-                vehicles = await client.vehicles_async(
-                    cluster.make, cluster.model, filter_vehicles_by_profile=False
-                )
-            except Exception as exc:  # noqa: BLE001
-                # Tijdelijke fout: behoud de bekende uitvoeringen van dit model,
-                # zodat ze niet als "nieuw" terugkomen bij de volgende controle.
-                print(
-                    f"  (uitvoeringen niet geladen voor {cluster.make} {cluster.model}: {exc})",
-                    file=sys.stderr,
-                )
-                carried.update(k for k in previous if k.startswith(prefix))
+    current: dict[str, dict] = {}
+    carried: set[str] = set()
+    for cluster in matched:
+        prefix = f"{cluster.make}|{cluster.model}|"
+        cap = price_cap_for(cluster, watches)
+        try:
+            vehicles = await client.vehicles_async(
+                cluster.make, cluster.model, filter_vehicles_by_profile=False
+            )
+        except Exception as exc:  # noqa: BLE001
+            log(f"  (uitvoeringen niet geladen voor {cluster.make} "
+                f"{cluster.model}: {exc})", err=True)
+            carried.update(k for k in previous if k.startswith(prefix))
+            continue
+        for v in vehicles:
+            if exclude_ev and v.isElectric:
                 continue
-            for v in vehicles:
-                if exclude_ev and v.isElectric:
-                    continue
-                if (
-                    cap is not None
-                    and v.priceInEuroPerMonth is not None
-                    and v.priceInEuroPerMonth > cap
-                ):
-                    continue
-                current[vkey(cluster, v)] = variant_info(cluster, v)
+            if (
+                cap is not None
+                and v.priceInEuroPerMonth is not None
+                and v.priceInEuroPerMonth > cap
+            ):
+                continue
+            current[vkey(cluster, v)] = variant_info(cluster, v)
 
-        present = set(current) | carried
-        new_keys = present - previous
+    present = set(current) | carried
+    new_keys = present - previous
 
-        print(
-            f"{len(clusters)} clusters, {len(matched)} match(es), "
-            f"{len(present)} uitvoering(en) gevolgd, {len(new_keys)} nieuw."
+    log(f"{len(clusters)} clusters, {len(matched)} match(es), "
+        f"{len(present)} uitvoering(en) gevolgd, {len(new_keys)} nieuw.")
+
+    if was_outage:
+        notify(
+            "Athlon-monitor weer online",
+            ["De verbinding met de showroom is hersteld."],
+            SHOWROOM_URL, tags="white_check_mark", priority="low",
         )
 
-        if was_outage:
-            notify(
-                "\u2705 Athlon-monitor weer online",
-                ["De verbinding met de showroom is hersteld; je krijgt weer meldingen."],
-                SHOWROOM_URL,
-                tags="white_check_mark",
-                priority="low",
-            )
+    # ---- meldingen, en pas daarna opslaan ----------------------------------
+    undelivered: set[str] = set()
 
-        if seeding:
-            # Eerste run of overstap van een eerdere versie: alles vastleggen,
-            # geen stortvloed aan meldingen.
-            notify(
-                "\u2705 Athlon-monitor actief",
-                [
-                    f"{len(present)} uitvoering(en) van je merken nu in beeld.",
-                    "Je krijgt voortaan een melding zodra er een nieuwe verschijnt.",
-                ],
-                SHOWROOM_URL,
-                tags="white_check_mark",
-                priority="low",
-            )
-            print("Seed-run: uitvoeringen vastgelegd, geen losse meldingen.")
-        elif new_keys:
-            new_infos = sorted(
-                (current[k] for k in new_keys), key=lambda i: (i.get("price") or 1e9)
-            )
-            if len(new_infos) <= max_individual:
-                for info in new_infos:
-                    title, lines = variant_message(info)
-                    notify(title, lines, info["link"], image_url=info["image"])
-            else:
-                lines = [summary_line(i) for i in new_infos]
-                notify(
-                    f"{len(new_infos)} nieuwe uitvoeringen in de showroom",
-                    lines,
-                    SHOWROOM_URL,
+    if seeding:
+        notify(
+            "Athlon-monitor actief",
+            [
+                f"{len(present)} uitvoering(en) van je merken nu in beeld.",
+                "Je krijgt voortaan een melding zodra er een nieuwe verschijnt.",
+            ],
+            SHOWROOM_URL, tags="white_check_mark", priority="low",
+        )
+        log("Seed-run: uitvoeringen vastgelegd, geen losse meldingen.")
+    elif new_keys:
+        new_infos = sorted(
+            ((k, current[k]) for k in new_keys),
+            key=lambda kv: (not is_priority(kv[0], priority_keywords),
+                            kv[1].get("price") or 1e9),
+        )
+        if len(new_infos) <= max_individual:
+            for key, info in new_infos:
+                urgent = is_priority(key, priority_keywords)
+                title, lines = variant_message(info, urgent)
+                ok = notify(
+                    title, lines, info["link"], image_url=info["image"],
+                    tags="rotating_light" if urgent else "red_car",
+                    priority="urgent" if urgent else "high",
                 )
+                if not ok:
+                    undelivered.add(key)
         else:
-            print("Geen nieuwe uitvoeringen.")
-
-        # ---- heartbeat ----------------------------------------------------
-        today = date.today().isoformat()
-        if state.get("last_heartbeat") is None:
-            state["last_heartbeat"] = today
-        elif not seeding and heartbeat_due(state["last_heartbeat"], heartbeat_days):
-            notify(
-                "\u2705 Athlon-monitor draait",
-                [
-                    f"Alles werkt. {len(present)} uitvoering(en) van je merken "
-                    f"nu beschikbaar.",
-                    "Laatste check OK.",
-                ],
-                SHOWROOM_URL,
-                tags="white_check_mark",
-                priority="low",
+            urgent_keys = [k for k, _ in new_infos if is_priority(k, priority_keywords)]
+            lines = [summary_line(i) for _, i in new_infos]
+            ok = notify(
+                f"{len(new_infos)} nieuwe uitvoeringen in de showroom",
+                lines, SHOWROOM_URL,
+                tags="rotating_light" if urgent_keys else "red_car",
+                priority="urgent" if urgent_keys else "high",
             )
+            if not ok:
+                undelivered.update(k for k, _ in new_infos)
+    else:
+        log("Geen nieuwe uitvoeringen.")
+
+    if undelivered:
+        log(f"{len(undelivered)} melding(en) niet bezorgd, blijven nieuw voor de "
+            f"volgende ronde.", err=True)
+
+    # ---- heartbeat ---------------------------------------------------------
+    today = date.today().isoformat()
+    if state.get("last_heartbeat") is None:
+        state["last_heartbeat"] = today
+    elif not seeding and heartbeat_due(state["last_heartbeat"], heartbeat_days):
+        if notify(
+            "Athlon-monitor draait",
+            [f"Alles werkt. {len(present)} uitvoering(en) van je merken beschikbaar."],
+            SHOWROOM_URL, tags="white_check_mark", priority="low",
+        ):
             state["last_heartbeat"] = today
 
-        state["present"] = sorted(present)
-        state["present_kind"] = "variant"
-        save_state(state)
+    # Niet bezorgde auto's blijven buiten present, zodat ze nieuw blijven.
+    state["present"] = sorted(present - undelivered)
+    state["present_kind"] = "variant"
+    save_state(state)
+    commit_state()
+    ping_healthcheck()
+
+
+async def main_async() -> int:
+    loop_minutes = int(os.environ.get("LOOP_MINUTES", "0"))
+    interval = max(30, int(os.environ.get("INTERVAL_SECONDS", "120")))
+    deadline = time.monotonic() + loop_minutes * 60
+
+    client = make_client()
+    rounds = 0
+    try:
+        while True:
+            rounds += 1
+            try:
+                await check_once(client, load_watchlist())
+            except Exception as exc:  # noqa: BLE001
+                log(f"Ronde {rounds} viel om: {type(exc).__name__}: {exc}", err=True)
+            if loop_minutes <= 0:
+                break
+            if time.monotonic() + interval >= deadline:
+                log(f"Loop klaar na {rounds} ronde(s). De volgende run neemt het over.")
+                break
+            await asyncio.sleep(interval)
         return 0
     finally:
         try:
