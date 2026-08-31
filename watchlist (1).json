@@ -4,7 +4,8 @@
     "Lege 'make' = elk merk. Lege 'model' = elk model van dat merk.",
     "'max_price' is optioneel: maximaal euro per maand (met de prijsinstellingen hieronder).",
     "Matching is hoofdletter-ongevoelig en op deel-tekst, dus merk 'Mercedes' matcht ook 'Mercedes-Benz' en 'Mercedes-AMG'.",
-    "De 'pricing'-instellingen komen overeen met jouw showroom-URL."
+    "'priority_keywords' zijn losse woorden die allemaal in 'merk|model|uitvoering' moeten voorkomen.",
+    "Een treffer daarop krijgt ntfy-prioriteit urgent en komt ook door je stille modus heen."
   ],
 
   "pricing": {
@@ -12,6 +13,18 @@
     "number_of_km_per_month": 1000,
     "include_mileage_costs_in_pricing": true,
     "include_fuel_costs_in_pricing": true
+  },
+
+  "settings": {
+    "exclude_electric": false,
+    "max_individual_notifications": 8,
+    "heartbeat_days": 2,
+    "outage_threshold": 5,
+    "priority_keywords": [
+      "cla",
+      "mercedes eqa",
+      "mercedes eqb"
+    ]
   },
 
   "watches": [
