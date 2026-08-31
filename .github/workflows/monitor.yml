@@ -1,16 +1,20 @@
 name: Athlon Flex monitor
 
+# De cron is hier alleen nog de STARTMOTOR, niet de klok.
+# GitHub start geplande runs onbetrouwbaar (gemeten: circa 12% van de
+# geplande runs). Daarom checkt een run zelf ruim vijf uur lang door,
+# elke INTERVAL_SECONDS. Zolang de cron een keer per vijf uur afgaat,
+# is de dekking aaneengesloten.
 on:
   schedule:
-    # Elke 15 minuten (tijden in UTC). Pas de */15 aan naar wens.
-    # Let op: gratis Actions-minuten zijn onbeperkt bij een PUBLIC repo.
-    # Bij een private repo: houd het interval op >= 30 min (zie README).
-    - cron: "*/15 * * * *"
-  workflow_dispatch: {}   # geeft een "Run workflow"-knop om handmatig te testen
+    - cron: "7,37 * * * *"
+  workflow_dispatch: {}
 
 permissions:
-  contents: write          # nodig om state.json terug te committen
+  contents: write
 
+# Een tegelijk. Een nieuwe geplande run blijft wachten en start direct
+# zodra de lopende run klaar is. Zo rijgen de runs zich aaneen.
 concurrency:
   group: athlon-flex-monitor
   cancel-in-progress: false
@@ -18,6 +22,7 @@ concurrency:
 jobs:
   check:
     runs-on: ubuntu-latest
+    timeout-minutes: 350
     steps:
       - uses: actions/checkout@v4
 
@@ -28,27 +33,17 @@ jobs:
       - name: Installeer dependencies
         run: pip install --quiet -r requirements.txt
 
-      - name: Controleer de showroom
+      - name: Bewaak de showroom
         env:
-          # --- Notificatiekanaal (minstens 1 instellen) ---
+          LOOP_MINUTES:     "320"   # circa 5u20m per run
+          INTERVAL_SECONDS: "120"   # elke 2 minuten een check
+          GIT_PERSIST:      "1"
           NTFY_TOPIC:          ${{ secrets.NTFY_TOPIC }}
           NTFY_TOKEN:          ${{ secrets.NTFY_TOKEN }}
           TELEGRAM_BOT_TOKEN:  ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID:    ${{ secrets.TELEGRAM_CHAT_ID }}
-          # --- Optioneel: inloggen voor netto-prijzen (niet nodig) ---
+          HEALTHCHECK_URL:     ${{ secrets.HEALTHCHECK_URL }}
           ATHLON_USERNAME:     ${{ secrets.ATHLON_USERNAME }}
           ATHLON_PASSWORD:     ${{ secrets.ATHLON_PASSWORD }}
           GROSS_YEARLY_INCOME: ${{ secrets.GROSS_YEARLY_INCOME }}
         run: python monitor.py
-
-      - name: Bewaar status
-        run: |
-          if [[ -n "$(git status --porcelain state.json)" ]]; then
-            git config user.name  "github-actions[bot]"
-            git config user.email "github-actions[bot]@users.noreply.github.com"
-            git add state.json
-            git commit -m "Update showroom-status [skip ci]"
-            git push
-          else
-            echo "Geen wijziging in status."
-          fi
