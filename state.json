@@ -4,6 +4,7 @@
   "outage_alerted": false,
   "present": [
     "BMW|3 Serie Touring|320e 5D 150kW",
+    "Mercedes-Benz|EQA|250 Business Solution AMG auto 5D 140kW",
     "Mercedes-Benz|EQE|350+ Launch Edition - AMG Line auto 4D 215kW",
     "Polestar|Polestar 2|78kWh Dual Motor Long Range 5D 300kW",
     "Polestar|Polestar 2|78kWh Single Motor Long Range 5D 170kW",
@@ -14,7 +15,8 @@
     "Volkswagen|ID4|77kWh 150kW Pro Auto 5D",
     "Volkswagen|ID5|BEV 77 kWh 128 kW Pro Business auto 5D",
     "Volkswagen|ID5|BEV 77 kWh 128 kW Pro auto 5D",
-    "Volkswagen|ID5|BEV 77 kWh 150 kW Pro auto 5D"
+    "Volkswagen|ID5|BEV 77 kWh 150 kW Pro auto 5D",
+    "Volkswagen|Taigo|1.0 TSI 70kW Life Edition 5D"
   ],
   "present_kind": "variant"
 }
