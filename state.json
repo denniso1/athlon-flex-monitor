@@ -4,6 +4,7 @@
   "outage_alerted": false,
   "present": [
     "BMW|i4|eDrive35 5D 210kW",
+    "Mercedes-Benz|EQA|250 Business Solution Luxury",
     "Mercedes-Benz|EQE|300 Luxury Line auto 4D 180kW",
     "Mercedes-Benz|EQE|EQE 300 Luxury Line auto 4D 180kW",
     "Polestar|Polestar 2|78kWh Dual Motor Long Range 5D 300kW",
@@ -15,7 +16,8 @@
     "Volkswagen|ID4|77kWh 150kW Pro Auto 5D",
     "Volkswagen|ID5|BEV 77 kWh 128 kW Pro Business auto 5D",
     "Volkswagen|ID5|BEV 77 kWh 128 kW Pro auto 5D",
-    "Volkswagen|ID5|BEV 77 kWh 150 kW Pro auto 5D"
+    "Volkswagen|ID5|BEV 77 kWh 150 kW Pro auto 5D",
+    "Volkswagen|Polo|1.0 TSI 70kW 7-DSG Life Edition 5D"
   ],
   "present_kind": "variant"
 }
