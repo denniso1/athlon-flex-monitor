@@ -3,6 +3,7 @@
   "last_heartbeat": "2026-10-08",
   "outage_alerted": false,
   "present": [
+    "BMW|IX 1|eDrive20 5D 150kW",
     "BMW|i4|eDrive35 5D 210kW",
     "Mercedes-Benz|EQA|EQA 250 Business Line auto 5D 140kW",
     "Mercedes-Benz|EQE|300 AMG Line auto 4D 180kW",
@@ -13,6 +14,7 @@
     "Polestar|Polestar 2|78kWh Dual Motor Long Range 5D 300kW",
     "Polestar|Polestar 2|Long Range Dual Motor 5D 300kW",
     "Polestar|Polestar 2|Long Range Single Motor 5D 170kW",
+    "Polestar|Polestar 2|Long Range Single Motor Plus 5D 220kW",
     "Polestar|Polestar 2|Standard Range Single Motor 5D 170kW",
     "Polestar|Polestar 4|Long Range Single Motor 5D 200kW",
     "Volkswagen|ID4|77kWh 128kW Pro Business Auto 5D",
